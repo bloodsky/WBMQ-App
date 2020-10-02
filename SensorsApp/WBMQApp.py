@@ -1,11 +1,17 @@
 import requests
 import time
 from flask import Flask
+from flask import jsonify
+from flask import request
 import random
 import threading
 from functools import partial
 from tkinter import *
-
+import socket
+from tkinter import ttk
+from tkinter import messagebox
+import re
+from concurrent.futures import ThreadPoolExecutor
 
 class class_one:
 
@@ -18,7 +24,7 @@ class class_one:
         data['type'] = th_data['e2']
         ack = ""
         while True:    
-            
+            time.sleep(5)
             data['msg'] = str(random.uniform(25.5, 50.9))
             data['pbrtx'] = False
             
@@ -27,50 +33,58 @@ class class_one:
             
             try: 
                 # Happy scenario
-                self.Console.insert(INSERT, "\n BEFORE REQUEST...\n")
+             
                 r = requests.post('http://localhost:5000/sensor', json=data, timeout=5)
                 if final_id =="":
                     final_id = r.json()['id']
                 ack = r.json()['msg']
 
-                self.Console.insert(INSERT, "\n")
-                self.Console.insert(INSERT, ack + "\n")
+                #self.Console.insert(INSERT, "\n")
+                #self.Console.insert(INSERT, ack + "\n")
                 time.sleep(5)
             except requests.exceptions.ConnectionError:
-                self.Console.insert(INSERT, "\n")
-                self.Console.insert(INSERT, "Error requesting backend!")
+                print("Pub: Error requesting backend!")
+                #self.Console.insert(INSERT, "\n")
+                #self.Console.insert(INSERT, "Error requesting backend!")
             except requests.exceptions.Timeout:
 
                 while ack != "Ack on message : " +  data['msg'] + " on sensorn :" + final_id:
                     
                     try:
                         data['pbrtx'] = True
-                        self.Console.insert(INSERT, "\n BEFORE REQUEST RETRASMIT...\n")
+                        #self.Console.insert(INSERT, "\n BEFORE REQUEST RETRASMIT...\n")
                         r = requests.post('http://localhost:5000/sensor', json=data, timeout=5)
                         if final_id =="":
                             final_id = r.json()['id']
 
                         ack = r.json()['msg']
 
-                        self.Console.insert(INSERT, "\n RETRANSMITTING...\n")
-                        self.Console.insert(INSERT, ack + "\n")
+                        #self.Console.insert(INSERT, "\n RETRANSMITTING...\n")
+                        #self.Console.insert(INSERT, ack + "\n")
                     except requests.exceptions.ConnectionError:
-                        self.Console.insert(INSERT, "\n")
-                        self.Console.insert(INSERT, "Error requesting backend!")
+                        print("Pub: Error requesting backend!")
+                        #self.Console.insert(INSERT, "\n")
+                        #self.Console.insert(INSERT, "Error requesting backend!")
                     except requests.exceptions.Timeout:
-                        self.Console.insert(INSERT, "\n CE STAMO POPO A RIPROVA...\n")
+                        #self.Console.insert(INSERT, "\n CE STAMO POPO A RIPROVA...\n")
                         continue
 
+    def sel_sens(self):
+        self.e2_sens = str(self.var_sens.get())
+    def sel_sens2(self):
+        self.e1_sens = str(self.var_sens2.get())
 
-
-    def spawnsensor(self,e1, e2, newWin):
-        th_data = {}
-        th_data['e1'] = e1.get()
-        th_data['e2'] = e2.get()
-        newWin.destroy()
-        maincal = threading.Thread(target=self.runBackground, args=(th_data,))
-        maincal.start()
-       
+    def spawnsensor(self, newWin):
+        if self.e1_sens != '' and self.e2_sens != '':
+            th_data = {}
+            th_data['e1'] = self.e1_sens
+            th_data['e2'] = self.e2_sens
+            if newWin != None:
+                newWin.destroy()
+            maincal = threading.Thread(target=self.runBackground, args=(th_data,))
+            maincal.start()
+        else:
+            messagebox.showerror("Error!","You must select both sector and topic!")
 
     def spawnSensorCallBack(self):
         newWindow = Toplevel(self.root)
@@ -79,56 +93,90 @@ class class_one:
         x_cor = int((self.screen_width / 2) - (236 / 2))
         y_cor = int((self.screen_height / 2) - (67 / 2))
 
-        newWindow.geometry("{}x{}+{}+{}".format(236, 67, x_cor, y_cor))
+        newWindow.geometry("{}x{}+{}+{}".format(286, 180, x_cor, y_cor))
 
-        Label(newWindow,
-              text="Sector").grid(row=0, column=0)
-        Label(newWindow,
-              text="Type").grid(row=1, column=0)
+        self.var_sens2 = StringVar(value="1")
+        Label(newWindow, text="Choose sector:").grid(row=0, column=0)
+        R1_sector = Radiobutton(newWindow, text="A1", variable=self.var_sens2, value="A1",command=self.sel_sens2)
+        R1_sector.grid(row=1, column=0)
+        
+        R2_sector = Radiobutton(newWindow, text="A2", variable=self.var_sens2, value="A2",command=self.sel_sens2)
+        R2_sector.grid(row=2, column=0)
+        
+        R3_sector = Radiobutton(newWindow, text="B1", variable=self.var_sens2, value="B1",command=self.sel_sens2)
+        R3_sector.grid(row=3, column=0)
 
-        e1 = Entry(newWindow, width=18)
-        e2 = Entry(newWindow, width=18)
+        R4_sector = Radiobutton(newWindow, text="B2", variable=self.var_sens2, value="B2",command=self.sel_sens2)
+        R4_sector.grid(row=4, column=0)
 
-        e1.grid(row=0, column=1)
-        e2.grid(row=1, column=1)
+        R5_sector = Radiobutton(newWindow, text="B3", variable=self.var_sens2, value="B3",command=self.sel_sens2)
+        R5_sector.grid(row=5, column=0)
 
-        action_with_arg = partial(self.spawnsensor, e1, e2, newWindow)
-        B7 = Button(newWindow, text="Spawn", command=action_with_arg, width=18).grid(row=2, column=0)
-        Be = Button(newWindow, text="Close", command=newWindow.destroy, width=18).grid(row=2, column=1)
+        R6_sector = Radiobutton(newWindow, text="C1", variable=self.var_sens2, value="C1",command=self.sel_sens2)
+        R6_sector.grid(row=1, column=1)
+
+        R7_sector = Radiobutton(newWindow, text="C2", variable=self.var_sens2, value="C2",command=self.sel_sens2)
+        R7_sector.grid(row=2, column=1)
+
+        R8_sector = Radiobutton(newWindow, text="D1", variable=self.var_sens2, value="D1",command=self.sel_sens2)
+        R8_sector.grid(row=3, column=1)
+
+        R9_sector = Radiobutton(newWindow, text="D2", variable=self.var_sens2, value="D2",command=self.sel_sens2)
+        R9_sector.grid(row=4, column=1)
+
+        R10_sector = Radiobutton(newWindow, text="D3", variable=self.var_sens2, value="D3",command=self.sel_sens2)
+        R10_sector.grid(row=5, column=1)
+
+        
+        Label(newWindow, text="Choose topic:").grid(row=0, column=4)
+        newWindow.grid_columnconfigure(3, minsize=50)
+        
+        self.var_sens = StringVar(value="1")
+        R1_topic = Radiobutton(newWindow, text="Humidity", variable=self.var_sens, value="Humidity",command=self.sel_sens)
+        R1_topic.grid(row=1, column=4,sticky="w")
+
+        R2_topic = Radiobutton(newWindow, text="Motion", variable=self.var_sens, value="Motion",command=self.sel_sens)
+        R2_topic.grid(row=2, column=4,sticky="w")
+
+        R3_topic = Radiobutton(newWindow, text="Temperature", variable=self.var_sens, value="Temperature",command=self.sel_sens)
+        R3_topic.grid(row=3, column=4,sticky="w")
+
+        action_with_arg = partial(self.spawnsensor, newWindow)
+        B7 = Button(newWindow, text="Spawn", command=action_with_arg, width=7).grid(row=7, column=3)
 
 
     def bot_task_Background(self, th_data):
-        
+        hostname = socket.gethostname()    
+        IPAddr = socket.gethostbyname(hostname)
         # Richiedo la sub
-        
         data = {}
         data['id'] = ""
         data['current_sector'] = th_data['e1']
         data['topic'] = th_data['e2']
+        data['ipaddr'] = IPAddr
         # gestire try except
         r = requests.post('http://localhost:5000/bot', json=data)
-        
         # Ricevo ACK dal broker
         id = r.json()['id']
+        # UI UPDATE
+        self.listBox.insert("", "end", values=("["+id+"]"+" in "+data['current_sector'], "waiting", "waiting",data['topic']))
 
-        app = Flask(__name__)
-        app.run(host='0.0.0.0', port=5001)
-        
-        @app.route("/")
-        def wait_for_message():
-            # if id == id che mi manda il broker
-            # allora il messaggio riguarda me e quindi me lo storo
-            print("ok")
+    def spawnbot(self, newWin):
+        if self.e1_bot != '' and self.e2_bot != '':
+            th_data = {}
+            th_data['e1'] = self.e1_bot
+            th_data['e2'] = self.e2_bot
+            if newWin != None:
+                newWin.destroy()
+            maincal = threading.Thread(target=self.bot_task_Background, args=(th_data,))
+            maincal.start()
+        else:
+            messagebox.showerror("Error!","You must select both sector and topic!")
 
-
-    def spawnbot(self, e1, e2, newWin):
-        
-        th_data = {}
-        th_data['e1'] = e1.get()
-        th_data['e2'] = e2.get()
-        newWin.destroy()
-        maincal = threading.Thread(target=self.bot_task_Background, args=(th_data,))
-        maincal.start()
+    def sel(self):
+        self.e2_bot = str(self.var.get())
+    def sel2(self):
+        self.e1_bot = str(self.var2.get())
 
     def spawnBotCallBack(self):
         newWindow = Toplevel(self.root)
@@ -137,57 +185,91 @@ class class_one:
         x_cor = int((self.screen_width / 2) - (236 / 2))
         y_cor = int((self.screen_height / 2) - (67 / 2))
 
-        newWindow.geometry("{}x{}+{}+{}".format(236, 67, x_cor, y_cor))
+        newWindow.geometry("{}x{}+{}+{}".format(286, 180, x_cor, y_cor))
 
-        Label(newWindow,
-              text="Sector").grid(row=0, column=0)
-        Label(newWindow,
-              text="Topic").grid(row=1, column=0)
+        self.var2 = StringVar(value="1")
+        Label(newWindow, text="Choose sector:").grid(row=0, column=0)
 
-        e1 = Entry(newWindow, width=18)
-        e2 = Entry(newWindow, width=18)
+        R1_sector= Radiobutton(newWindow, text="A1", variable=self.var2, value="A1",command=self.sel2)
 
-        e1.grid(row=0, column=1)
-        e2.grid(row=1, column=1)
+        R1_sector.grid(row=1, column=0)
+        
+        R2_sector = Radiobutton(newWindow, text="A2", variable=self.var2, value="A2",command=self.sel2)
 
-        action_with_arg = partial(self.spawnbot, e1, e2, newWindow)
-        B2 = Button(newWindow, text="Spawn", command=action_with_arg, width=18).grid(row=2, column=0)
-        Be = Button(newWindow, text="Close", command=newWindow.destroy, width=18).grid(row=2, column=1)
+        R2_sector.grid(row=2, column=0)
+        
+        R3_sector = Radiobutton(newWindow, text="B1", variable=self.var2, value="B1",command=self.sel2)
 
+        R3_sector.grid(row=3, column=0)
 
-    def unsub(self, e1):
-        id = e1.get();
-        print("-------- ", id)
-        r = requests.post('http://localhost:5000/unsubscribeBot', json=id)
-        insertedId = r.json()['id']
-        # cs = r.json()['current_sector']
-        tp = r.json()['topic']
+        R4_sector = Radiobutton(newWindow, text="B2", variable=self.var2, value="B2",command=self.sel2)
 
-        self.Console.insert(INSERT, "\n")
-        self.Console.insert(INSERT, "Unsubscribing ...\n")
-        self.Console.insert(INSERT, "* ID: " + insertedId + "\n")
-        self.Console.insert(INSERT, "* Bot was unsubscribed from topic: " + tp)
-        self.Console.insert(INSERT, "\n")
+        R4_sector.grid(row=4, column=0)
 
-    def unsubSingleBot(self):
+        R5_sector = Radiobutton(newWindow, text="B3", variable=self.var2, value="B3",command=self.sel2)
 
-        newWindow = Toplevel(self.root)
-        newWindow.title("Unsubscribe bot")
+        R5_sector.grid(row=5, column=0)
 
-        x_cor = int((screen_width / 2) - (236 / 2))
-        y_cor = int((screen_height / 2) - (67 / 2))
+        R6_sector = Radiobutton(newWindow, text="C1", variable=self.var2, value="C1",command=self.sel2)
 
-        newWindow.geometry("{}x{}+{}+{}".format(236, 67, x_cor, y_cor))
+        R6_sector.grid(row=1, column=1)
 
-        Label(newWindow,
-              text="Insert bot ID:").grid(row=0, column=0)
+        R7_sector = Radiobutton(newWindow, text="C2", variable=self.var2, value="C2",command=self.sel2)
 
-        e1 = Entry(newWindow, width=18)
-        e1.grid(row=0, column=1)
+        R7_sector.grid(row=2, column=1)
 
-        action_with_arg = partial(self.unsub, e1)
-        B12 = Button(newWindow, text="Unsubscribe", command=action_with_arg, width=18).grid(row=2, column=0)
-        Be = Button(newWindow, text="Close", command=newWindow.destroy, width=18).grid(row=2, column=1)
+        R8_sector = Radiobutton(newWindow, text="D1", variable=self.var2, value="D1",command=self.sel2)
+
+        R8_sector.grid(row=3, column=1)
+
+        R9_sector = Radiobutton(newWindow, text="D2", variable=self.var2, value="D2",command=self.sel2)
+
+        R9_sector.grid(row=4, column=1)
+
+        R10_sector = Radiobutton(newWindow, text="D3", variable=self.var2, value="D3",command=self.sel2)
+
+        R10_sector.grid(row=5, column=1)
+
+        Label(newWindow, text="Choose topic:").grid(row=0, column=4)
+        newWindow.grid_columnconfigure(3, minsize=50)
+        self.var = StringVar(value="1")
+
+        R1_topic = Radiobutton(newWindow, text="Humidity", variable=self.var, value="Humidity",command=self.sel)
+
+        R1_topic.grid(row=1, column=4,sticky="w")
+
+        R2_topic = Radiobutton(newWindow, text="Motion", variable=self.var, value="Motion",command=self.sel)
+
+        R2_topic.grid(row=2, column=4,sticky="w")
+
+        R3_topic = Radiobutton(newWindow, text="Temperature", variable=self.var, value="Temperature",command=self.sel)
+
+        R3_topic.grid(row=3, column=4,sticky="w")
+
+        action_with_arg = partial(self.spawnbot, newWindow)
+        B2 = Button(newWindow, text="Spawn", command=action_with_arg, width=7).grid(row=7, column=3)
+      
+    def unsubBot(self):
+
+        curItem = self.listBox.focus()
+        col1 = self.listBox.item(curItem)['values'][0]
+        col2 = self.listBox.item(curItem)['values'][1]
+        col3 = self.listBox.item(curItem)['values'][2]
+        col4 = self.listBox.item(curItem)['values'][3]
+
+        botID = re.sub('[()]','',col1.split()[0])
+        sector = col1.split()[2]
+        topic = col4
+
+        data = {}
+        data['id'] = botID
+        data['current_sector'] = sector
+        data['topic'] = topic
+        data['ipaddr'] = 'notneeded'
+
+        r = requests.post('http://localhost:5000/unsubscribeBot', json=data)
+        # check for ack
+        # ...
 
     def heartBeatCallback(self):
         threading.Timer(6.0, self.heartBeatCallback).start()
@@ -215,9 +297,17 @@ class class_one:
 
         self.root = Tk()
         
+        self.e2_bot = ''
+        self.e1_bot = ''
+        self.e1_sens = ''
+        self.e2_sens = ''
+        # for random spawn and unsub
+        self.topics = ['Humidity','Motion','Temperature']
+        self.sectors = ['A1','A2','B1','B2','B3','C1','C2','D1','D2','D3']
+
         self.root.resizable(False, False)
         self.window_height = 600
-        self.window_width = 800
+        self.window_width = 1020
 
         self.screen_width = self.root.winfo_screenwidth()
         self.screen_height = self.root.winfo_screenheight()
@@ -253,27 +343,34 @@ class class_one:
         wrapper4.pack(side=BOTTOM, fill="both", expand="yes", padx=0, pady=0)
         wrapper2.pack(side=TOP, fill="both", expand="no", padx=0, pady=0)
 
-        self.Console = Text(myframe, width=75, height=35)
-        # Console.config(state=DISABLED)
-        self.Console.pack()
-        
+        cols = ('Bot', 'Received value', 'Sensor', 'Topic')
+        self.listBox = ttk.Treeview(myframe, columns=cols, show='headings', height=35)
+        # set column headings
+        for col in cols:
+            self.listBox.heading(col, text=col)    
+        #listBox.grid(row=1, column=0, columnspan=2)
+        self.listBox.pack()
+
         B = Button(wrapper3, text="Subscribe a new bot", command=self.botsub_thread, width=25).pack()
-        #B3 = Button(wrapper3, text="Subscribe random bots", command=spawnRandomBots, width=25).pack()
-        Bremove = Button(wrapper3, text="Unsubscribe single bot", command=self.botunsub_thread, width=25).pack()
-        #Bremoverand = Button(wrapper3, text="Unsubscribe random bots", command=unsubRandomBots, width=25).pack()
+        B3 = Button(wrapper3, text="Subscribe random bots", command=self.spawnRandomBots_thread, width=25).pack()
+        
+        # Lo facciamo con il doppio click sulla row della tabella?
+        # se vogliamo provare il bottone bisogna rimuovere da botunsub_thread paramentro a
+        Bremove = Button(wrapper3, text="Unsubscribe bot", command=self.botunsub_thread, width=25).pack()
+        # Questo è per il doppio click!
+        self.listBox.bind('<ButtonRelease-1>', self.botunsub_thread)
+            
+        B4 = Button(wrapper2, text="Publish a new value", command=self.sensorpub_thread, width=25).pack()
+        B5 = Button(wrapper2, text="Publish random values", command=self.spawnRandomSensor_thread, width=25).pack()
+        
+        # Servono?
         #B45 = Button(wrapper3, text="Kill single bot", command=killSingleBot, width=25).pack()
         #B46 = Button(wrapper3, text="Kill random bots", command=killRandomBot, width=25).pack()
-        #B1 = Button(wrapper3, text="List all bots", command=listBotsCallBack, width=25).pack()
-
-        B4 = Button(wrapper2, text="Publish a new value", command=self.sensorpub_thread, width=25).pack()
-        #B5 = Button(wrapper2, text="Publish random values", command=spawnRandomSensor, width=25).pack()
         #Bkill = Button(wrapper2, text="Kill single sensor", command=killSingleSensor, width=25).pack()
         #Bkillrand = Button(wrapper2, text="Kill random sensors", command=killRandomSensor, width=25).pack()
-        #B6 = Button(wrapper2, text="List all sensors", command=listSensorsCallBack, width=25).pack()
 
+        # Figo da implementare switch context a runtime? 
         #B21 = Button(wrapper4, text="Context switch (?)", command=switchCallBack, width=25).pack()
-        #B21 = Button(wrapper4, text="Timestamp report", command=listSensorsCallBack, width=25).pack()
-        #B21 = Button(wrapper4, text="Track work", command=consoleRequest, width=25).pack()
 
         self.my_string_var = StringVar(value="Checking system status ...")
 
@@ -291,13 +388,60 @@ class class_one:
         my_label = Label(wrapper4, textvariable=self.my_string_var)
         my_label.pack()
 
+        executor = ThreadPoolExecutor(50)
+        future = executor.submit(self.task, ("Completed"))
+        
         self.heartbeat_thread()
         self.root.update()
         self.root.mainloop()
 
+    def task(self, message):
+       app = Flask(__name__)
+       hostname = socket.gethostname()    
+       IPAddr = socket.gethostbyname(hostname)
+       
+       @app.route("/", methods = ['POST'])
+       def wait_for_message():
 
-    def botunsub_thread(self):
-        maincal = threading.Thread(target=self.unsubSingleBot)
+            data = request.get_json()
+            msg = data.get('msg', '')
+            botId = data.get('botId', '')
+            bot_cs = data.get('bot_cs', '')
+            sensor = data.get('sensor', '')
+            sensor_cs = data.get('sensor_cs', '')
+           
+            # UI UPDATE
+            children = self.listBox.get_children('')
+            for child in children:
+                values = self.listBox.item(child, 'values')
+                if values[0] == "["+botId+"]"+" in "+bot_cs:
+                    self.listBox.set(child, column="Received value", value=msg)
+                    self.listBox.set(child, column="Sensor", value="["+sensor+"]"+" in "+sensor_cs)
+                    break
+
+            data = {'id': botId,'message': msg}
+            return jsonify(data)
+                 
+       app.run(debug=True, use_reloader=False, host=IPAddr, port=5001)
+       
+
+    def spawnRandomSensor_thread(self):
+        # non random per adesso.
+        for _ in range(5):
+            self.e1_sens = random.choice(self.sectors)
+            self.e2_sens = random.choice(self.topics)
+            maincal = threading.Thread(target=self.spawnsensor(None))
+            maincal.start()
+    def spawnRandomBots_thread(self):
+        # non random per adesso.
+        for _ in range(5):
+            self.e1_bot = random.choice(self.sectors) 
+            self.e2_bot = random.choice(self.topics)
+            maincal = threading.Thread(target=self.spawnbot(None))
+            maincal.start()
+
+    def botunsub_thread(self,a):
+        maincal = threading.Thread(target=self.unsubBot)
         maincal.start()
     
     def botsub_thread(self):
