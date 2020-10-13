@@ -25,10 +25,18 @@
     <Compile Include="WBMQApp.py" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="boticon.png" />
+    <Content Include="checkgreenicon.png" />
+    <Content Include="cpu.png" />
+    <Content Include="electrical_sensor.png" />
     <Content Include="futuristic.png" />
+    <Content Include="here.png" />
+    <Content Include="ic_controller.png" />
     <Content Include="maintenance.png" />
     <Content Include="offline.png" />
+    <Content Include="ok.png" />
     <Content Include="reverse-engineering.png" />
+    <Content Include="sensoricon.png" />
     <Content Include="timer.png" />
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets" />
