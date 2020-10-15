@@ -45,7 +45,7 @@ class class_one:
 
                 #self.Console.insert(INSERT, "\n")
                 #self.Console.insert(INSERT, ack + "\n")
-                time.sleep(5)
+                time.sleep(15)
             except requests.exceptions.ConnectionError:
                 print("Pub: Error requesting backend!")
 
@@ -283,7 +283,7 @@ class class_one:
                     break
 
             r = requests.post('http://localhost:5000/unsubscribeBot', json=data)
-            # check for ack
+            # TODO check for ack
             # ...
 
     def heartBeatCallback(self):
