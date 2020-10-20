@@ -1,4 +1,5 @@
-import requests
+import requests 
+from requests import get
 import time
 from flask import Flask
 from flask import jsonify
@@ -11,6 +12,7 @@ import socket
 from tkinter import ttk
 from tkinter import messagebox
 import re
+import struct
 from concurrent.futures import ThreadPoolExecutor
 
 
@@ -38,14 +40,12 @@ class class_one:
             try: 
                 # Happy scenario
              
-                r = requests.post('http://localhost:5000/sensor', json=data, timeout=5)
+                r = requests.post('http://'+self.remoteaddr+'/sensor', json=data, timeout=5)
                 if final_id =="":
                     final_id = r.json()['id']
                 ack = r.json()['msg']
 
-                #self.Console.insert(INSERT, "\n")
-                #self.Console.insert(INSERT, ack + "\n")
-                time.sleep(15)
+
             except requests.exceptions.ConnectionError:
                 print("Pub: Error requesting backend!")
 
@@ -55,21 +55,16 @@ class class_one:
                     
                     try:
                         data['pbrtx'] = True
-                        #self.Console.insert(INSERT, "\n BEFORE REQUEST RETRASMIT...\n")
-                        r = requests.post('http://localhost:5000/sensor', json=data, timeout=5)
+                        r = requests.post('http://'+self.remoteaddr+'/sensor', json=data, timeout=5)
                         if final_id =="":
                             final_id = r.json()['id']
 
                         ack = r.json()['msg']
 
-                        #self.Console.insert(INSERT, "\n RETRANSMITTING...\n")
-                        #self.Console.insert(INSERT, ack + "\n")
                     except requests.exceptions.ConnectionError:
                         print("Pub: Error requesting backend!")
-                        #self.Console.insert(INSERT, "\n")
-                        #self.Console.insert(INSERT, "Error requesting backend!")
+
                     except requests.exceptions.Timeout:
-                        #self.Console.insert(INSERT, "\n CE STAMO POPO A RIPROVA...\n")
                         continue
 
     def sel_sens(self):
@@ -149,20 +144,33 @@ class class_one:
 
 
     def bot_task_Background(self, th_data):
-        hostname = socket.gethostname()    
-        IPAddr = socket.gethostbyname(hostname)
+
+        ip = get('https://api.ipify.org').text
         # Richiedo la sub
         data = {}
-        data['id'] = ""
+        if 'id' in th_data:
+            data['id'] = th_data['id']
+        else:
+            data['id'] = ""
+
         data['current_sector'] = th_data['e1']
         data['topic'] = th_data['e2']
-        data['ipaddr'] = IPAddr
+        data['ipaddr'] = ip
         # gestire try except
-        r = requests.post('http://localhost:5000/bot', json=data)
+        r = requests.post('http://'+self.remoteaddr+'/bot', json=data)
         # Ricevo ACK dal broker
         id = r.json()['id']
         # UI UPDATE
-        self.listBox.insert("", "end", values=("["+id+"]"+" in "+data['current_sector'], "waiting", "waiting",data['topic']))
+        children = self.listBox.get_children('')
+        if 'id' in th_data:
+            for child in children:
+                values = self.listBox.item(child, 'values')
+                if values[0] == "["+th_data['id']+"]"+" in "+th_data['e1'] and values[1] == "unsubbed" and values[2] == " ... ":                 
+                    self.listBox.set(child, column="#2", value="waiting")
+                    self.listBox.set(child, column="#3", value="waiting")
+                    break
+        else:
+            self.listBox.insert("", "end", values=("["+id+"]"+" in "+data['current_sector'], "waiting", "waiting",data['topic']))
 
     def spawnbot(self, newWin):
         if self.e1_bot != '' and self.e2_bot != '':
@@ -252,6 +260,34 @@ class class_one:
         action_with_arg = partial(self.spawnbot, newWindow)
         B2 = Button(newWindow, text="Spawn", command=action_with_arg, width=7).grid(row=7, column=3)
     
+
+    def resubBot(self):
+        
+        curItem = self.listBox.focus()
+        if len(self.listBox.item(curItem)['values']) == 0:
+            messagebox.showerror("Error!","You must select a row first!")
+        else:
+            col1 = self.listBox.item(curItem)['values'][0]
+            col2 = self.listBox.item(curItem)['values'][1]
+            col3 = self.listBox.item(curItem)['values'][2]
+            col4 = self.listBox.item(curItem)['values'][3]
+
+            unsubbed = col2
+            threep = col3
+            if unsubbed == "unsubbed" and threep == " ... ":
+                botID = col1.split()[0].replace('[','').replace(']','')
+                sector = col1.split()[2]
+                topic = col4
+        
+                th_data = {}
+                th_data['id'] = botID
+                th_data['e1'] = sector
+                th_data['e2'] = topic
+                maincal = threading.Thread(target=self.bot_task_Background, args=(th_data,))
+                maincal.start()
+            else:
+                messagebox.showerror("Error!","You must select an unsubbed bot!")
+
     def unsubBot(self):
         
         curItem = self.listBox.focus()
@@ -259,43 +295,50 @@ class class_one:
             messagebox.showerror("Error!","You must select a row first!")
         else:
             col1 = self.listBox.item(curItem)['values'][0]
+            col2 = self.listBox.item(curItem)['values'][1]
+            col3 = self.listBox.item(curItem)['values'][2]
             col4 = self.listBox.item(curItem)['values'][3]
 
             botID = col1.split()[0].replace('[','').replace(']','')
             sector = col1.split()[2]
             topic = col4
-            print(botID+" "+sector+" "+topic)
+            
+            if col2 == "unsubbed" and col3 == " ... ":
+                messagebox.showerror("Error!","Cannot unsub and unsubbed bot!")
+            else:
+                data = {}
+                data['id'] = botID
+                data['current_sector'] = sector
+                data['topic'] = topic
+                data['ipaddr'] = 'notneeded'
+    
 
-            data = {}
-            data['id'] = botID
-            data['current_sector'] = sector
-            data['topic'] = topic
-            data['ipaddr'] = 'notneeded'
+                r = requests.post('http://'+self.remoteaddr+'/unsubscribeBot', json=data)
+                if r.json()['id'] == "null" and r.json()['current_sector'] == "null" and r.json()['topic'] == "null" and r.json()['ipaddr'] == "null":
+                    # UI UPDATE
+                    children = self.listBox.get_children('')
+                    for child in children:
+                        values = self.listBox.item(child, 'values')
+                        if values[0] == "["+botID+"]"+" in "+sector:
+                            subchildren = self.listBox.get_children(child)
+                            self.listBox.set(child, column="#2", value="unsubbed")
+                            self.listBox.set(child, column="#3", value=" ... ")                   
+                            if len(subchildren) != 0:
+                                for subchild in subchildren:
+                                    self.listBox.delete(subchild)
+                            break                      
 
-        
-            # UI UPDATE
-            children = self.listBox.get_children('')
-            for child in children:
-                values = self.listBox.item(child, 'values')
-                if values[0] == "["+botID+"]"+" in "+sector:
-                    self.listBox.set(child, column="#2", value="waiting")
-                    self.listBox.set(child, column="#3", value="waiting")
-                    break
-
-            r = requests.post('http://localhost:5000/unsubscribeBot', json=data)
-            # TODO check for ack
-            # ...
 
     def heartBeatCallback(self):
         threading.Timer(6.0, self.heartBeatCallback).start()
         try:
             
-            r = requests.get('http://localhost:5000/status')
+            r = requests.get('http://'+self.remoteaddr+'/status')
             if r.json()['status'] == "alivectx":
                 context = 1
-                self.my_string_var.set("System is running\nin context-aware mode")#\nat:"+r.json()['timestamp'])
+                self.my_string_var.set("System is running\nin context-aware mode")
             elif r.json()['status'] == "alive":
-                self.my_string_var.set("System is running\nwithout context")#\nat:"+r.json()['timestamp'])
+                self.my_string_var.set("System is running\nwithout context")
             self.limg.configure(image=self.working)
             self.limg.image =self.working
             #self.totbot  = r.json()['totbot']
@@ -444,6 +487,8 @@ class class_one:
         self.hardness_bot = 50
         self.hardness_sensor = 50
 
+        #localhost:5000
+        self.remoteaddr = 'wbmqsystemproject-dev.us-east-2.elasticbeanstalk.com'
 
         self.times_bot =    [0  ,    1,   5,   60]
         self.prob_bot  =    [0.1, 0.69, 0.2, 0.01]
@@ -529,17 +574,17 @@ class class_one:
         B = Button(self.wrapper3, text="Subscribe a new bot", command=self.botsub_thread, width=25).pack()
         B3 = Button(self.wrapper3, text="Subscribe random bots", command=self.spawnRandomBots_thread, width=25).pack()
         
-        #Bremove = Button(wrapper3, text="Unsubscribe bot", command=self.botunsub_thread, width=25).pack()
             
         B4 = Button(wrapper2, text="Publish a new value", command=self.sensorpub_thread, width=25).pack()
         B5 = Button(wrapper2, text="Publish random values", command=self.spawnRandomSensor_thread, width=25).pack()
         
         Bremove = Button(self.wrapper3, text="Unsubscribe bot", command=self.botunsub_thread, width=25).pack()
+        Bresub = Button(self.wrapper3, text="Resubscribe bot", command=self.botresub_thread, width=25).pack()
 
         B45 = Button(self.wrapper3, text="Bot killing frequencies", command=self.killbot_thread, width=25).pack()
         Bkill = Button(wrapper2, text="Sensor killing frequencies", command=self.killsensor_thread, width=25).pack()
 
-        B455 = Button(wrapper2, text="Draw up report", command=self.killbot_thread, width=25).pack()
+        #B455 = Button(wrapper2, text="Draw up report", command=self.killbot_thread, width=25).pack()
 
         self.my_string_var = StringVar(value="Checking system status ...")
         self.totbot = StringVar(value="0")
@@ -592,11 +637,13 @@ class class_one:
         self.root.update()
         self.root.mainloop()
 
+    def get_ip_address(self):
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(("8.8.8.8", 80))
+        return s.getsockname()[0]
+
     def task(self, message):
         app = Flask(__name__)
-        hostname = socket.gethostname()    
-        IPAddr = socket.gethostbyname(hostname)
-        
        
         @app.route("/", methods = ['POST'])
         def wait_for_message():
@@ -650,7 +697,7 @@ class class_one:
             data = {'id': botId,'message': msg}
             return jsonify(data)
                  
-        app.run(debug=True, use_reloader=False, host=IPAddr, port=5001)
+        app.run(debug=True, use_reloader=False, host=self.get_ip_address(), port=5001)
        
 
     def spawnRandomSensor_thread(self):
@@ -669,6 +716,10 @@ class class_one:
             maincal = threading.Thread(target=self.spawnbot(None))
             maincal.start()
 
+    def botresub_thread(self):
+        maincal = threading.Thread(target=self.resubBot)
+        maincal.start()
+    
     def botunsub_thread(self):
         maincal = threading.Thread(target=self.unsubBot)
         maincal.start()
