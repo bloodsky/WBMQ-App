@@ -14,7 +14,11 @@ from tkinter import messagebox
 import re
 import struct
 from concurrent.futures import ThreadPoolExecutor
-
+import matplotlib
+import matplotlib.pyplot as plt
+from matplotlib.figure import Figure 
+from matplotlib.backends.backend_tkagg import (FigureCanvasTkAgg,  
+NavigationToolbar2Tk) 
 
 class class_one:
 
@@ -336,20 +340,27 @@ class class_one:
             r = requests.get('http://'+self.remoteaddr+'/status')
             if r.json()['status'] == "alivectx":
                 context = 1
-                self.my_string_var.set("System is running\nin context-aware mode")
+                self.my_string_var.set("Running in context-aware mode")
             elif r.json()['status'] == "alive":
-                self.my_string_var.set("System is running\nwithout context")
+                self.my_string_var.set("Running without context")
             self.limg.configure(image=self.working)
             self.limg.image =self.working
-            #self.totbot  = r.json()['totbot']
-            #self.totsens = r.json()['totsens']
+            self.totbot  = r.json()['totbot']
+            self.totsens = r.json()['totsens']
 
         except requests.exceptions.ConnectionError:
             self.my_string_var.set("System is down!")
             self.limg.configure(image=self.stopped)
             self.limg.image = self.stopped
-            #self.totbot = "Error retriving data!"
-            #self.totsens= "Error retriving data!"
+            self.totbot = 0
+            self.totsens = 0
+
+        except requests.exceptions.Timeout:
+            self.my_string_var.set("System is down!")
+            self.limg.configure(image=self.stopped)
+            self.limg.image = self.stopped
+            self.totbot = 0
+            self.totsens = 0
 
     def save(self):
         pass
@@ -469,6 +480,47 @@ class class_one:
         action_with_arg = partial(self.save_values_sensor, w, newWindow)
         Button(newWindow, text='Set', width='10', command=action_with_arg).place(x=127,y=133)
 
+    def latency(self):
+        
+        newWindow = Toplevel(self.root)
+        newWindow.title("Latency testing window")
+
+        x_cor = int((self.screen_width / 2) - (500 / 2))
+        y_cor = int((self.screen_height / 2) - (500 / 2))
+        newWindow.geometry("{}x{}+{}+{}".format(500, 500, x_cor, y_cor))
+
+        r = requests.get('http://'+self.remoteaddr+'/stats')
+        times = r.json()['timelist']
+
+
+        # the figure that will contain the plot 
+        fig = Figure(figsize = (5, 5), dpi = 100) 
+        # adding the subplot 
+        plot1 = fig.add_subplot(111) 
+  
+        y = []
+        for t in times:
+            y.append(float(t))
+
+        # plotting the graph 
+        plot1.plot(y) 
+        plot1.set_xlabel('Requests') 
+        plot1.set_ylabel('Latency in seconds')
+        plot1.title.set_text('Bots: '+str(self.totbot)+' Sensors: '+str(self.totsens))
+
+        canvas = FigureCanvasTkAgg(fig, master = newWindow)   
+        canvas.draw() 
+  
+        # placing the canvas on the Tkinter window 
+        canvas.get_tk_widget().pack() 
+  
+        # creating the Matplotlib toolbar 
+        toolbar = NavigationToolbar2Tk(canvas, newWindow) 
+        toolbar.update() 
+  
+        # placing the toolbar on the Tkinter window 
+        canvas.get_tk_widget().pack() 
+
     def main_form(self):
 
         self.root = Tk()
@@ -487,7 +539,7 @@ class class_one:
         self.hardness_bot = 50
         self.hardness_sensor = 50
 
-        #localhost:5000
+        #self.remoteaddr = 'localhost:5000'
         self.remoteaddr = 'wbmqsystemproject-dev.us-east-2.elasticbeanstalk.com'
 
         self.times_bot =    [0  ,    1,   5,   60]
@@ -507,9 +559,9 @@ class class_one:
         self.x_cordinate = int((self.screen_width / 2) - (self.window_width / 2))
         self.y_cordinate = int((self.screen_height / 2) - (self.window_height / 2))
 
-        self.load = PhotoImage(file="timer.png").subsample(10, 10)
-        self.working = PhotoImage(file="reverse-engineering.png").subsample(8, 8)
-        self.stopped = PhotoImage(file="futuristic.png").subsample(8, 8)
+        self.load = PhotoImage(file="timer.png").subsample(12, 12)
+        self.working = PhotoImage(file="reverse-engineering.png").subsample(10, 10)
+        self.stopped = PhotoImage(file="futuristic.png").subsample(12, 12)
 
         self.root.geometry("{}x{}+{}+{}".format(self.window_width, self.window_height, self.x_cordinate, self.y_cordinate))
 
@@ -582,6 +634,7 @@ class class_one:
         Bresub = Button(self.wrapper3, text="Resubscribe bot", command=self.botresub_thread, width=25).pack()
 
         B45 = Button(self.wrapper3, text="Bot killing frequencies", command=self.killbot_thread, width=25).pack()
+        Btests = Button(self.wrapper3, text="Show latency tests", command=self.latency, width=25).pack()
         Bkill = Button(wrapper2, text="Sensor killing frequencies", command=self.killsensor_thread, width=25).pack()
 
         #B455 = Button(wrapper2, text="Draw up report", command=self.killbot_thread, width=25).pack()
@@ -630,7 +683,7 @@ class class_one:
         infob.pack(anchor=CENTER)
         self.location_bot = self.canvas_bot.create_image(self.hardness_sensor+28,48, image=ph_ok_sens)
 
-        executor = ThreadPoolExecutor(50)
+        executor = ThreadPoolExecutor(100)
         future = executor.submit(self.task, ("Completed"))
         
         self.heartbeat_thread()
@@ -644,7 +697,7 @@ class class_one:
 
     def task(self, message):
         app = Flask(__name__)
-       
+
         @app.route("/", methods = ['POST'])
         def wait_for_message():
 
@@ -702,7 +755,7 @@ class class_one:
 
     def spawnRandomSensor_thread(self):
         # non random per adesso.
-        for _ in range(5):
+        for _ in range(10):
             self.e1_sens = random.choice(self.sectors)
             self.e2_sens = random.choice(self.topics)
             maincal = threading.Thread(target=self.spawnsensor(None))
@@ -710,12 +763,12 @@ class class_one:
 
     def spawnRandomBots_thread(self):
         # non random per adesso.
-        for _ in range(5):
+        for _ in range(10):
             self.e1_bot = random.choice(self.sectors) 
             self.e2_bot = random.choice(self.topics)
             maincal = threading.Thread(target=self.spawnbot(None))
             maincal.start()
-
+       
     def botresub_thread(self):
         maincal = threading.Thread(target=self.resubBot)
         maincal.start()
