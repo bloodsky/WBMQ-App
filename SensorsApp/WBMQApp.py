@@ -11,6 +11,7 @@ from tkinter import *
 import socket
 from tkinter import ttk
 from tkinter import messagebox
+from tkinter import simpledialog
 import re
 import struct
 from concurrent.futures import ThreadPoolExecutor
@@ -19,6 +20,7 @@ import matplotlib.pyplot as plt
 from matplotlib.figure import Figure 
 from matplotlib.backends.backend_tkagg import (FigureCanvasTkAgg,  
 NavigationToolbar2Tk) 
+
 
 class class_one:
 
@@ -352,15 +354,15 @@ class class_one:
             self.my_string_var.set("System is down!")
             self.limg.configure(image=self.stopped)
             self.limg.image = self.stopped
-            self.totbot = 0
-            self.totsens = 0
+            #self.totbot = 0
+            #self.totsens = 0
 
         except requests.exceptions.Timeout:
             self.my_string_var.set("System is down!")
             self.limg.configure(image=self.stopped)
             self.limg.image = self.stopped
-            self.totbot = 0
-            self.totsens = 0
+            #self.totbot = 0
+            #self.totsens = 0
 
     def save(self):
         pass
@@ -463,7 +465,7 @@ class class_one:
         y_cor = int((self.screen_height / 2) - (67 / 2))
         newWindow.geometry("{}x{}+{}+{}".format(334, 170, x_cor, y_cor))
         newWindow.resizable(False, False)
-
+        
         w = Scale(newWindow ,from_=1, to=99, orient=HORIZONTAL, length=276)
         w.set(50)
         w.pack()
@@ -532,15 +534,13 @@ class class_one:
         self.e1_bot = ''
         self.e1_sens = ''
         self.e2_sens = ''
-        # for random spawn and unsub
+        # Data struct to handle random spawn
         self.topics = ['Humidity','Motion','Temperature']
         self.sectors = ['A1','A2','B1','B2','B3','C1','C2','D1','D2','D3']
-        # for timing
+        # Default probability to get general system hardness
         self.hardness_bot = 50
         self.hardness_sensor = 50
 
-        #self.remoteaddr = 'localhost:5000'
-        self.remoteaddr = 'wbmqsystemproject-dev.us-east-2.elasticbeanstalk.com'
 
         self.times_bot =    [0  ,    1,   5,   60]
         self.prob_bot  =    [0.1, 0.69, 0.2, 0.01]
@@ -552,6 +552,9 @@ class class_one:
         self.root.resizable(False, False)
         self.window_height = 600
         self.window_width = 1020
+
+        self.totbot = 0
+        self.totsens = 0
 
         self.screen_width = self.root.winfo_screenwidth()
         self.screen_height = self.root.winfo_screenheight()
@@ -590,6 +593,7 @@ class class_one:
 
         cols = ('#1','#2','#3','#4')
         
+        # Fix needed to work with tkinter UI table treeview
         def fixed_map(option):
         # Fix for setting text colour for Tkinter 8.6.9
         # From: https://core.tcl.tk/tk/info/509cafafae
@@ -603,6 +607,7 @@ class class_one:
                 elm[:2] != ('!disabled', '!selected')]
 
         
+        # Treeview showing subbed bots and received msg from sensors
         style = ttk.Style()
         style.map('Treeview', foreground=fixed_map('foreground'), background=fixed_map('background'))
         self.listBox = ttk.Treeview(myframe,height=35)
@@ -636,8 +641,6 @@ class class_one:
         B45 = Button(self.wrapper3, text="Bot killing frequencies", command=self.killbot_thread, width=25).pack()
         Btests = Button(self.wrapper3, text="Show latency tests", command=self.latency, width=25).pack()
         Bkill = Button(wrapper2, text="Sensor killing frequencies", command=self.killsensor_thread, width=25).pack()
-
-        #B455 = Button(wrapper2, text="Draw up report", command=self.killbot_thread, width=25).pack()
 
         self.my_string_var = StringVar(value="Checking system status ...")
         self.totbot = StringVar(value="0")
@@ -682,6 +685,11 @@ class class_one:
         infob = Label(wrapper4, text="Bot death frequency")
         infob.pack(anchor=CENTER)
         self.location_bot = self.canvas_bot.create_image(self.hardness_sensor+28,48, image=ph_ok_sens)
+
+       
+        USER_INP_ADDR = simpledialog.askstring(title="EB address", prompt="Insert your machine EB address:",parent=self.root)
+        #wbmqsystemproject-dev.us-east-2.elasticbeanstalk.com
+        self.remoteaddr = USER_INP_ADDR
 
         executor = ThreadPoolExecutor(100)
         future = executor.submit(self.task, ("Completed"))
@@ -754,34 +762,44 @@ class class_one:
        
 
     def spawnRandomSensor_thread(self):
+        USER_INP_ADDR = simpledialog.askstring(title="EB address", prompt="Insert number of random sensors to spawn:",parent=self.root)
+        times = USER_INP_ADDR
         # non random per adesso.
-        for _ in range(10):
+        for _ in range(int(times)):
+            self.totsens = self.totsens + 1
             self.e1_sens = random.choice(self.sectors)
             self.e2_sens = random.choice(self.topics)
             maincal = threading.Thread(target=self.spawnsensor(None))
             maincal.start()
 
     def spawnRandomBots_thread(self):
+        USER_INP_ADDR = simpledialog.askstring(title="EB address", prompt="Insert number of random bots to spawn:",parent=self.root)
+        times = USER_INP_ADDR
         # non random per adesso.
-        for _ in range(10):
+        for _ in range(int(times)):
+            self.totbot = self.totbot + 1
             self.e1_bot = random.choice(self.sectors) 
             self.e2_bot = random.choice(self.topics)
             maincal = threading.Thread(target=self.spawnbot(None))
             maincal.start()
        
     def botresub_thread(self):
+        self.totbot = self.totbot + 1
         maincal = threading.Thread(target=self.resubBot)
         maincal.start()
     
     def botunsub_thread(self):
+        self.totbot = self.totbot - 1
         maincal = threading.Thread(target=self.unsubBot)
         maincal.start()
     
     def botsub_thread(self):
+        self.totbot = self.totbot + 1
         maincal = threading.Thread(target=self.spawnBotCallBack)
         maincal.start()
 
     def sensorpub_thread(self):
+        self.totsens = self.totsens + 1
         maincal = threading.Thread(target=self.spawnSensorCallBack)
         maincal.start()
 
