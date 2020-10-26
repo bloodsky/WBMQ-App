@@ -15,11 +15,6 @@ from tkinter import simpledialog
 import re
 import struct
 from concurrent.futures import ThreadPoolExecutor
-import matplotlib
-import matplotlib.pyplot as plt
-from matplotlib.figure import Figure 
-from matplotlib.backends.backend_tkagg import (FigureCanvasTkAgg,  
-NavigationToolbar2Tk) 
 
 
 class class_one:
@@ -482,47 +477,6 @@ class class_one:
         action_with_arg = partial(self.save_values_sensor, w, newWindow)
         Button(newWindow, text='Set', width='10', command=action_with_arg).place(x=127,y=133)
 
-    def latency(self):
-        
-        newWindow = Toplevel(self.root)
-        newWindow.title("Latency testing window")
-
-        x_cor = int((self.screen_width / 2) - (500 / 2))
-        y_cor = int((self.screen_height / 2) - (500 / 2))
-        newWindow.geometry("{}x{}+{}+{}".format(500, 500, x_cor, y_cor))
-
-        r = requests.get('http://'+self.remoteaddr+'/stats')
-        times = r.json()['timelist']
-
-
-        # the figure that will contain the plot 
-        fig = Figure(figsize = (5, 5), dpi = 100) 
-        # adding the subplot 
-        plot1 = fig.add_subplot(111) 
-  
-        y = []
-        for t in times:
-            y.append(float(t))
-
-        # plotting the graph 
-        plot1.plot(y) 
-        plot1.set_xlabel('Requests') 
-        plot1.set_ylabel('Latency in seconds')
-        plot1.title.set_text('Bots: '+str(self.totbot)+' Sensors: '+str(self.totsens))
-
-        canvas = FigureCanvasTkAgg(fig, master = newWindow)   
-        canvas.draw() 
-  
-        # placing the canvas on the Tkinter window 
-        canvas.get_tk_widget().pack() 
-  
-        # creating the Matplotlib toolbar 
-        toolbar = NavigationToolbar2Tk(canvas, newWindow) 
-        toolbar.update() 
-  
-        # placing the toolbar on the Tkinter window 
-        canvas.get_tk_widget().pack() 
-
     def main_form(self):
 
         self.root = Tk()
@@ -639,7 +593,6 @@ class class_one:
         Bresub = Button(self.wrapper3, text="Resubscribe bot", command=self.botresub_thread, width=25).pack()
 
         B45 = Button(self.wrapper3, text="Bot killing frequencies", command=self.killbot_thread, width=25).pack()
-        Btests = Button(self.wrapper3, text="Show latency tests", command=self.latency, width=25).pack()
         Bkill = Button(wrapper2, text="Sensor killing frequencies", command=self.killsensor_thread, width=25).pack()
 
         self.my_string_var = StringVar(value="Checking system status ...")
