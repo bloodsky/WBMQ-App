@@ -764,24 +764,27 @@ class class_one:
     def spawnRandomSensor_thread(self):
         USER_INP_ADDR = simpledialog.askstring(title="EB address", prompt="Insert number of random sensors to spawn:",parent=self.root)
         times = USER_INP_ADDR
-        # non random per adesso.
-        for _ in range(int(times)):
-            self.totsens = self.totsens + 1
-            self.e1_sens = random.choice(self.sectors)
-            self.e2_sens = random.choice(self.topics)
-            maincal = threading.Thread(target=self.spawnsensor(None))
-            maincal.start()
+        
+        if str(times).isnumeric():
+            # non random per adesso.
+            for _ in range(int(times)):
+                self.totsens = self.totsens + 1
+                self.e1_sens = random.choice(self.sectors)
+                self.e2_sens = random.choice(self.topics)
+                maincal = threading.Thread(target=self.spawnsensor(None))
+                maincal.start()
 
     def spawnRandomBots_thread(self):
         USER_INP_ADDR = simpledialog.askstring(title="EB address", prompt="Insert number of random bots to spawn:",parent=self.root)
         times = USER_INP_ADDR
         # non random per adesso.
-        for _ in range(int(times)):
-            self.totbot = self.totbot + 1
-            self.e1_bot = random.choice(self.sectors) 
-            self.e2_bot = random.choice(self.topics)
-            maincal = threading.Thread(target=self.spawnbot(None))
-            maincal.start()
+        if str(times).isnumeric():
+            for _ in range(int(times)):
+                self.totbot = self.totbot + 1
+                self.e1_bot = random.choice(self.sectors) 
+                self.e2_bot = random.choice(self.topics)
+                maincal = threading.Thread(target=self.spawnbot(None))
+                maincal.start()
        
     def botresub_thread(self):
         self.totbot = self.totbot + 1
