@@ -5,11 +5,13 @@ Multithreaded controller application written in python for [WBMQSystemProject](h
 ## Installation
 
 ```bash
-  # Dependencies
-  pip install Flask
+  	# Dependencies
+  	pip install Flask
 	pip install requests
   
-  # Actual running
+  	# Actual running
 	python WBMQApp.py
 ```
 
+## Show case
+![alt text](https://github.com/bloodsky/WBMQ-App/blob/master/SensorsApp/runningex.png)
