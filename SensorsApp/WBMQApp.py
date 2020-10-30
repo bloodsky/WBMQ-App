@@ -39,7 +39,6 @@ class class_one:
             data['id'] = final_id
             
             try: 
-                # Happy scenario
              
                 r = requests.post('http://'+self.remoteaddr+'/sensor', json=data, timeout=5)
                 if final_id =="":
@@ -147,7 +146,7 @@ class class_one:
     def bot_task_Background(self, th_data):
 
         ip = get('https://api.ipify.org').text
-        # Richiedo la sub
+        # Sub requesting
         data = {}
         if 'id' in th_data:
             data['id'] = th_data['id']
@@ -157,9 +156,9 @@ class class_one:
         data['current_sector'] = th_data['e1']
         data['topic'] = th_data['e2']
         data['ipaddr'] = ip
-        # gestire try except
+        
         r = requests.post('http://'+self.remoteaddr+'/bot', json=data)
-        # Ricevo ACK dal broker
+        # Broker ack
         id = r.json()['id']
         # UI UPDATE
         children = self.listBox.get_children('')
@@ -349,15 +348,11 @@ class class_one:
             self.my_string_var.set("System is down!")
             self.limg.configure(image=self.stopped)
             self.limg.image = self.stopped
-            #self.totbot = 0
-            #self.totsens = 0
 
         except requests.exceptions.Timeout:
             self.my_string_var.set("System is down!")
             self.limg.configure(image=self.stopped)
             self.limg.image = self.stopped
-            #self.totbot = 0
-            #self.totsens = 0
 
     def save(self):
         pass
@@ -719,7 +714,6 @@ class class_one:
         times = USER_INP_ADDR
         
         if str(times).isnumeric():
-            # non random per adesso.
             for _ in range(int(times)):
                 self.totsens = self.totsens + 1
                 self.e1_sens = random.choice(self.sectors)
@@ -730,7 +724,6 @@ class class_one:
     def spawnRandomBots_thread(self):
         USER_INP_ADDR = simpledialog.askstring(title="EB address", prompt="Insert number of random bots to spawn:",parent=self.root)
         times = USER_INP_ADDR
-        # non random per adesso.
         if str(times).isnumeric():
             for _ in range(int(times)):
                 self.totbot = self.totbot + 1
