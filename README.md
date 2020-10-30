@@ -4,7 +4,7 @@ Multithreaded controller application written in python for [WBMQSystemProject](h
 
 ## Installation
 
-Controller is working on internal IP address of the machine, listening on port "5001". It is necessary to port forwarding. 
+Controller works on internal IP address of the machine, listening on port "5001". It is necessary to port forwarding. 
 
 ```bash
   	# Dependencies
